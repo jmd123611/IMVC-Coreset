@@ -12,7 +12,7 @@ from models import MLP
 from tree import ACC, Tree, f_measure, purity
 from train_model import train_model, train_model_with_new_loss
 DEFAULT_SEED = 42
-DEFAULT_DATASET = 'mfeat'
+DEFAULT_DATASET =
 
 def set_seed(seed):
     random.seed(seed)
@@ -68,6 +68,7 @@ def run_configuration(base, method, sample_ratio=FORMAL_SAMPLE_RATIO, min_sample
     name = f'scan_mvcoreset_{int(round(sample_ratio * 100))}pct'
     encoders, decoders = restore_models(base)
     root = copy.deepcopy(base['root'])
+    initial_node_count = tree.count_nodes(root)
     final_data = base['final_data']
     truth = base['dataset'].L
     labels = np.asarray(base['initial_labels']).copy()
@@ -102,6 +103,9 @@ def run_configuration(base, method, sample_ratio=FORMAL_SAMPLE_RATIO, min_sample
             node_count = tree.count_nodes(root)
             metrics = clustering_metrics(labels, truth)
             history.append({'event': 'tree_pass', 'outer_round': outer_round, 'tree_pass': tree_passes, 'nodes': node_count, **metrics})
+            if (initial_node_count - node_count) / initial_node_count > 0.5:
+                converged = True
+                break
             if node_count == previous_outer_node_count:
                 converged = True
                 break
@@ -116,7 +120,8 @@ def run_configuration(base, method, sample_ratio=FORMAL_SAMPLE_RATIO, min_sample
         history.append({'event': 'model_update', 'outer_round': outer_round, 'model_update': model_updates, **clustering_metrics(labels, truth)})
     optimization_seconds = time.perf_counter() - optimization_start
     final_labels = tree.collect_leaf_labels(root, final_data)
-    result = {'name': name, 'method': method, 'dataset': base['dataset_name'], 'seed': base['seed'], 'coreset_seed': coreset_seed, 'sample_ratio': sample_ratio, 'min_sample_size': min_sample_size, 'ini_len': 1, 'opt_len': 1, 'converged': converged, 'outer_rounds': outer_round, 'tree_passes': tree_passes, 'model_updates': model_updates, 'dynamic_disagreement': bool(dynamic_disagreement), 'disagreement_updates': disagreement_updates, 'final_metrics': clustering_metrics(final_labels, truth), 'tree_structure': {'nodes': tree.count_nodes(root), 'leaves': tree.count_leaf_nodes(root), 'max_depth': tree.max_depth(root), 'average_leaf_depth': tree.calculate_average_leaf_depth(root)}, 'timing': {**timing, 'optimization_seconds': optimization_seconds, 'equivalent_end_to_end_seconds': base['timing']['shared_initialization_seconds'] + optimization_seconds}, 'history': history}
+    final_node_count = tree.count_nodes(root)
+    result = {'name': name, 'method': method, 'dataset': base['dataset_name'], 'seed': base['seed'], 'coreset_seed': coreset_seed, 'sample_ratio': sample_ratio, 'min_sample_size': min_sample_size, 'ini_len': 1, 'opt_len': 1, 'converged': converged, 'outer_rounds': outer_round, 'tree_passes': tree_passes, 'model_updates': model_updates, 'dynamic_disagreement': bool(dynamic_disagreement), 'disagreement_updates': disagreement_updates, 'final_metrics': clustering_metrics(final_labels, truth), 'tree_structure': {'nodes': final_node_count, 'leaves': tree.count_leaf_nodes(root), 'max_depth': tree.max_depth(root), 'average_leaf_depth': tree.calculate_average_leaf_depth(root)}, 'timing': {**timing, 'optimization_seconds': optimization_seconds, 'equivalent_end_to_end_seconds': base['timing']['shared_initialization_seconds'] + optimization_seconds}, 'history': history}
     if method in ('coreset', 'mvcoreset'):
         stats = tree.optimization_stats_history
         result['coreset_summary'] = {'node_coresets_built': len(stats), 'total_node_samples': int(sum((item['node_samples'] for item in stats))), 'total_sampled_samples': int(sum((item['sample_size'] for item in stats))), 'mean_actual_sample_ratio': float(np.mean([item['sample_ratio_actual'] for item in stats])) if stats else 0.0}
