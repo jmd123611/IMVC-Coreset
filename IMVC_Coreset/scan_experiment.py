@@ -12,7 +12,7 @@ from models import MLP
 from tree import ACC, Tree, f_measure, purity
 from train_model import train_model, train_model_with_new_loss
 DEFAULT_SEED = 42
-DEFAULT_DATASET =
+DEFAULT_DATASET = 2005980327
 
 def set_seed(seed):
     random.seed(seed)
