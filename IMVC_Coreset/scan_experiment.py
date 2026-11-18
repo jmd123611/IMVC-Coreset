@@ -11,8 +11,8 @@ from formal_experiment_config import BUDGET_FRACTIONS as FORMAL_BUDGET_FRACTIONS
 from models import MLP
 from tree import ACC, Tree, f_measure, purity
 from train_model import train_model, train_model_with_new_loss
-DEFAULT_SEED = 42
-DEFAULT_DATASET = 2005980327
+DEFAULT_SEED = 2005980327
+DEFAULT_DATASET = 
 
 def set_seed(seed):
     random.seed(seed)
@@ -103,7 +103,7 @@ def run_configuration(base, method, sample_ratio=FORMAL_SAMPLE_RATIO, min_sample
             node_count = tree.count_nodes(root)
             metrics = clustering_metrics(labels, truth)
             history.append({'event': 'tree_pass', 'outer_round': outer_round, 'tree_pass': tree_passes, 'nodes': node_count, **metrics})
-            if (initial_node_count - node_count) / initial_node_count > 0.5:
+            if (initial_node_count - node_count) / initial_node_count > 0.8:
                 converged = True
                 break
             if node_count == previous_outer_node_count:
